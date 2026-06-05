@@ -69,27 +69,14 @@ html, body {
 
 ::selection { background: var(--accent); color: #fff; }
 
-html {
-  height: -webkit-fill-available;
-}
+body { display: flex; height: 100vh; }
 
-body {
-  display: flex;
-  height: 100vh;
-  height: -webkit-fill-available; /* iOS Safari */
-}
-
-@supports (height: 100dvh) {
-  body { height: 100dvh; }
-}
-
-/* Main layout juga ikut */
+/* Main layout */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 0; /* penting agar flex child bisa scroll */
 }
 
 /* Scrollbars */
@@ -755,9 +742,9 @@ body {
   .msg-inner { padding: 0 12px; max-width: 92%; }
   .typing-inner { padding: 0 12px; }
 
-  /* Input area — safe area untuk iPhone notch */
+  /* Input area mobile */
   .input-area {
-    padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 12px 14px;
   }
 
   .welcome-title { font-size: 22px; }
