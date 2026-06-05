@@ -5,14 +5,17 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "setup": "node scripts/download-vendor.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "groq-sdk": "^1.2.1"
+    "groq-sdk": "^1.2.1",
+    "highlight.js": "^11.11.1",
+    "marked": "^18.0.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
