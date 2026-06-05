@@ -69,7 +69,6 @@ html, body {
 
 ::selection { background: var(--accent); color: #fff; }
 
-/* Pakai dvh agar layout ikut mengecil saat keyboard virtual muncul */
 html {
   height: -webkit-fill-available;
 }
@@ -622,8 +621,6 @@ body {
   padding: 12px 22px 16px;
   background: var(--bg-base); border-top: 1px solid var(--border);
   flex-shrink: 0;
-  position: relative; /* diperlukan untuk transform */
-  z-index: 50;
 }
 
 /* System Prompt Bar */
@@ -758,12 +755,9 @@ body {
   .msg-inner { padding: 0 12px; max-width: 92%; }
   .typing-inner { padding: 0 12px; }
 
-  /* Input area sticky di atas keyboard — pakai dvh + safe-area */
+  /* Input area — safe area untuk iPhone notch */
   .input-area {
-    padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
-    position: sticky;
-    bottom: 0;
-    z-index: 50;
+    padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
   .welcome-title { font-size: 22px; }
