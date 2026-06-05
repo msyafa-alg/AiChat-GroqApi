@@ -21,6 +21,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── Routes ───────────────────────────────────
 app.use('/api/chat', chatRoute);
 
+// Route login
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
 // Semua route lain kembalikan index.html (SPA fallback)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

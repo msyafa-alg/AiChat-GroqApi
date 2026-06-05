@@ -179,7 +179,7 @@
         </div>
         <h1 class="welcome-title">Halo, saya <span class="gradient-text">AsefAI</span></h1>
         <p class="welcome-sub">Powered by Groq · <span id="welcomeModel">Llama 3.3 70B</span></p>
-        <p class="welcome-desc">Siap membantu <em>coding</em>, <em>debugging</em>, <em>belajar</em>, dan pertanyaan apapun.</p>
+        <p class="welcome-desc" id="welcomeDesc">Siap membantu <em>coding</em>, <em>debugging</em>, <em>belajar</em>, dan pertanyaan apapun.</p>
         <div class="welcome-chips">
           <button class="chip" data-text="Buatkan REST API sederhana dengan Express.js">
             <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
@@ -264,6 +264,8 @@
   <!-- Sidebar overlay -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
+  <!-- Firebase Auth — harus module type -->
+  <script type="module" src="auth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

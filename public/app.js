@@ -1,8 +1,9 @@
 // ============================================
 // AsefAI — Frontend Logic
-// Features: Streaming, Multiple Sessions,
-//           Model Selector, System Prompt,
-//           Token Counter
+// Features: Streaming, Auth, Firestore,
+//           localStorage backup, Regenerate,
+//           Personal Greeting, Model Selector,
+//           System Prompt, Token Counter
 // ============================================
 
 marked.setOptions({ breaks: true, gfm: true });
@@ -27,13 +28,9 @@ const currentModelLabel  = document.getElementById('currentModelLabel');
 const welcomeModelEl     = document.getElementById('welcomeModel');
 const headerTitle        = document.getElementById('headerTitle');
 const chatHistoryEl      = document.getElementById('chatHistory');
-
-// Model selector
 const btnModelSelector   = document.getElementById('btnModelSelector');
 const modelSelectorLabel = document.getElementById('modelSelectorLabel');
 const modelDropdown      = document.getElementById('modelDropdown');
-
-// System prompt
 const btnSystemPrompt    = document.getElementById('btnSystemPrompt');
 const systemPromptBar    = document.getElementById('systemPromptBar');
 const systemPromptInput  = document.getElementById('systemPromptInput');
@@ -41,19 +38,22 @@ const btnCloseSystemPrompt = document.getElementById('btnCloseSystemPrompt');
 const btnApplySystemPrompt = document.getElementById('btnApplySystemPrompt');
 const spCharCount        = document.getElementById('spCharCount');
 
-// ── App State ─────────────────────────────
-let isLoading      = false;
-let abortController = null;
-let currentModel   = 'llama-3.3-70b-versatile';
-let systemPrompt   = '';
-let totalTokens    = 0;
+// ── State ─────────────────────────────────
+let isLoading        = false;
+let abortController  = null;
+let currentModel     = 'llama-3.3-70b-versatile';
+let systemPrompt     = '';
+let totalTokens      = 0;
+let sessions         = [];
+let activeSession    = null;
+let currentUser      = null;
+const LS_KEY         = 'asefai_sessions';
 
-// Multiple sessions state
-let sessions       = [];   // array of { id, title, history, tokens }
-let activeSession  = null; // id of active session
-
-// ── Init ──────────────────────────────────
-init();
+// ── Boot — tunggu auth siap ───────────────
+window.addEventListener('authReady', (e) => {
+  currentUser = e.detail;
+  init();
+});
 
 function init() {
   // Chips
@@ -82,13 +82,9 @@ function init() {
     modelDropdown.classList.toggle('open');
     btnModelSelector.classList.toggle('open');
   });
-
   document.querySelectorAll('.model-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-      selectModel(opt.dataset.model, opt.dataset.label);
-    });
+    opt.addEventListener('click', () => selectModel(opt.dataset.model, opt.dataset.label));
   });
-
   document.addEventListener('click', (e) => {
     if (!btnModelSelector.contains(e.target) && !modelDropdown.contains(e.target)) {
       modelDropdown.classList.remove('open');
@@ -109,8 +105,135 @@ function init() {
     if (e.ctrlKey && e.key === 'k') { e.preventDefault(); newChat(); }
   });
 
-  // Start dengan sesi pertama
-  createNewSession();
+  // Load sessions dari localStorage dulu (instant)
+  loadFromLocalStorage();
+
+  // Lalu sync dari Firestore (background)
+  loadFromFirestore();
+}
+
+// ══════════════════════════════════════════
+// PERSISTENCE — localStorage + Firestore
+// ══════════════════════════════════════════
+
+function saveToLocalStorage() {
+  try {
+    const data = sessions.map(s => ({
+      id: s.id,
+      title: s.title,
+      history: s.history,
+      tokens: s.tokens,
+    }));
+    localStorage.setItem(LS_KEY + '_' + currentUser.uid, JSON.stringify(data));
+  } catch (e) { /* storage full, skip */ }
+}
+
+function loadFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(LS_KEY + '_' + currentUser.uid);
+    if (raw) {
+      const data = JSON.parse(raw);
+      sessions = data.map(s => ({ ...s, firestoreId: null }));
+      if (sessions.length > 0) {
+        activeSession = sessions[sessions.length - 1].id;
+        switchSession(activeSession);
+      } else {
+        createNewSession();
+      }
+    } else {
+      createNewSession();
+    }
+  } catch {
+    createNewSession();
+  }
+}
+
+async function loadFromFirestore() {
+  if (!window.firebaseDb || !currentUser) return;
+  const { collection, getDocs, query, orderBy } = window.fbUtils;
+  const db = window.firebaseDb;
+
+  try {
+    const q = query(
+      collection(db, 'users', currentUser.uid, 'sessions'),
+      orderBy('updatedAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return;
+
+    const fsessions = [];
+    for (const docSnap of snap.docs) {
+      const data = docSnap.data();
+      // Load messages subcollection
+      const msgsSnap = await getDocs(
+        query(collection(db, 'users', currentUser.uid, 'sessions', docSnap.id, 'messages'), orderBy('createdAt'))
+      );
+      const history = msgsSnap.docs.map(m => ({
+        role: m.data().role,
+        content: m.data().content,
+      }));
+      fsessions.push({
+        id: docSnap.id,
+        firestoreId: docSnap.id,
+        title: data.title || 'Chat',
+        history,
+        tokens: data.tokens || 0,
+      });
+    }
+
+    if (fsessions.length > 0) {
+      sessions = fsessions;
+      const last = sessions[0]; // paling baru
+      activeSession = last.id;
+      switchSession(activeSession);
+      saveToLocalStorage();
+    }
+  } catch (e) {
+    console.warn('Firestore load error:', e.message);
+  }
+}
+
+async function saveSessionToFirestore(session) {
+  if (!window.firebaseDb || !currentUser) return;
+  const { collection, doc, setDoc, addDoc, serverTimestamp } = window.fbUtils;
+  const db = window.firebaseDb;
+
+  try {
+    const sessionRef = session.firestoreId
+      ? doc(db, 'users', currentUser.uid, 'sessions', session.firestoreId)
+      : doc(collection(db, 'users', currentUser.uid, 'sessions'));
+
+    await setDoc(sessionRef, {
+      title: session.title,
+      tokens: session.tokens,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    if (!session.firestoreId) {
+      session.firestoreId = sessionRef.id;
+      session.id = sessionRef.id;
+    }
+
+    // Simpan pesan terakhir
+    const lastMsg = session.history[session.history.length - 1];
+    if (lastMsg) {
+      await addDoc(
+        collection(db, 'users', currentUser.uid, 'sessions', session.firestoreId, 'messages'),
+        { role: lastMsg.role, content: lastMsg.content, createdAt: serverTimestamp() }
+      );
+    }
+  } catch (e) {
+    console.warn('Firestore save error:', e.message);
+  }
+}
+
+async function deleteSessionFromFirestore(firestoreId) {
+  if (!window.firebaseDb || !currentUser || !firestoreId) return;
+  const { doc, deleteDoc } = window.fbUtils;
+  const db = window.firebaseDb;
+  try {
+    await deleteDoc(doc(db, 'users', currentUser.uid, 'sessions', firestoreId));
+  } catch (e) { /* skip */ }
 }
 
 // ══════════════════════════════════════════
@@ -119,13 +242,7 @@ function init() {
 
 function createNewSession(autoSwitch = true) {
   const id = Date.now().toString();
-  const session = {
-    id,
-    title: 'New Chat',
-    history: [],
-    tokens: 0,
-    messages: [], // snapshot DOM tidak disimpan, rebuild dari history
-  };
+  const session = { id, firestoreId: null, title: 'New Chat', history: [], tokens: 0 };
   sessions.push(session);
   if (autoSwitch) switchSession(id);
   return session;
@@ -134,8 +251,8 @@ function createNewSession(autoSwitch = true) {
 function switchSession(id) {
   activeSession = id;
   const session = getSession(id);
+  if (!session) return;
 
-  // Rebuild UI
   messagesEl.innerHTML = '';
   totalTokens = session.tokens;
   updateTokenCounter();
@@ -145,30 +262,23 @@ function switchSession(id) {
     showWelcome();
   } else {
     hideWelcome();
-    // Re-render semua pesan dari history
     session.history.forEach(msg => {
-      if (msg.role === 'user') {
-        renderUserBubble(msg.content);
-      } else if (msg.role === 'assistant') {
-        renderAiBubble(msg.content);
-      }
+      if (msg.role === 'user') renderUserBubble(msg.content, false);
+      else if (msg.role === 'assistant') renderAiBubble(msg.content, false);
     });
     scrollToBottom(true);
   }
-
   renderSidebar();
 }
 
-function getSession(id) {
-  return sessions.find(s => s.id === id);
-}
-
-function getActiveSession() {
-  return getSession(activeSession);
-}
+function getSession(id) { return sessions.find(s => s.id === id); }
+function getActiveSession() { return getSession(activeSession); }
 
 function deleteSession(id) {
+  const s = getSession(id);
+  if (s?.firestoreId) deleteSessionFromFirestore(s.firestoreId);
   sessions = sessions.filter(s => s.id !== id);
+  saveToLocalStorage();
   if (activeSession === id) {
     if (sessions.length === 0) createNewSession();
     else switchSession(sessions[sessions.length - 1].id);
@@ -179,8 +289,9 @@ function deleteSession(id) {
 
 function renderSidebar() {
   chatHistoryEl.innerHTML = '';
+  const withHistory = sessions.filter(s => s.history.length > 0).reverse();
 
-  if (sessions.every(s => s.history.length === 0)) {
+  if (withHistory.length === 0) {
     chatHistoryEl.innerHTML = `
       <div class="history-empty">
         <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24" opacity="0.3">
@@ -191,8 +302,7 @@ function renderSidebar() {
     return;
   }
 
-  // Tampilkan sesi yang sudah punya pesan
-  sessions.filter(s => s.history.length > 0).reverse().forEach(session => {
+  withHistory.forEach(session => {
     const item = document.createElement('div');
     item.classList.add('session-item');
     if (session.id === activeSession) item.classList.add('active');
@@ -204,11 +314,7 @@ function renderSidebar() {
     const del = document.createElement('button');
     del.classList.add('session-item-del');
     del.innerHTML = '×';
-    del.title = 'Hapus sesi';
-    del.addEventListener('click', (e) => {
-      e.stopPropagation();
-      deleteSession(session.id);
-    });
+    del.addEventListener('click', (e) => { e.stopPropagation(); deleteSession(session.id); });
 
     item.appendChild(text);
     item.appendChild(del);
@@ -216,7 +322,6 @@ function renderSidebar() {
       switchSession(session.id);
       if (window.innerWidth <= 768) closeSidebar();
     });
-
     chatHistoryEl.appendChild(item);
   });
 }
@@ -230,12 +335,10 @@ async function sendMessage() {
   if (!message || isLoading) return;
 
   const session = getActiveSession();
-
   hideWelcome();
   renderUserBubble(message);
   session.history.push({ role: 'user', content: message });
 
-  // Update judul sesi dari pesan pertama
   if (session.history.length === 1) {
     session.title = message.length > 36 ? message.slice(0, 36) + '…' : message;
     headerTitle.textContent = session.title;
@@ -246,14 +349,22 @@ async function sendMessage() {
   updateCharCount();
   autoResize();
 
-  setLoading(true);
+  await streamAIResponse(session, session.history);
+}
 
-  // Buat bubble AI kosong
+async function streamAIResponse(session, historySnapshot) {
+  setLoading(true);
   const { row, bubble, footer } = createAiBubbleEl();
   messagesEl.appendChild(row);
   scrollToBottom();
 
   let fullText = '';
+
+  // Greeting personal — inject nama user ke system prompt
+  const userName = currentUser?.displayName?.split(' ')[0] || '';
+  const extraContext = userName
+    ? `\nNama pengguna saat ini adalah ${userName}. Sapa dengan namanya jika ini adalah pesan pertama.`
+    : '';
 
   try {
     abortController = new AbortController();
@@ -262,10 +373,10 @@ async function sendMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message,
-        history: session.history,
+        message: historySnapshot[historySnapshot.length - 1].content,
+        history: historySnapshot.slice(0, -1),
         model: currentModel,
-        systemPrompt: systemPrompt || undefined,
+        systemPrompt: (systemPrompt || '') + extraContext,
       }),
       signal: abortController.signal,
     });
@@ -279,7 +390,7 @@ async function sendMessage() {
       return;
     }
 
-    const reader = res.body.getReader();
+    const reader  = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
 
@@ -306,29 +417,8 @@ async function sendMessage() {
             break;
           }
 
-          if (parsed.tokens) {
-            // Update token count dari server
-            session.tokens += parsed.tokens;
-            totalTokens = sessions.reduce((acc, s) => acc + s.tokens, 0);
-            updateTokenCounter();
-          }
-
           if (parsed.done) {
-            bubble.innerHTML = parseMarkdown(fullText);
-            bubble.querySelectorAll('pre').forEach(pre => wrapCodeBlock(pre));
-            if (parsed.fallback && parsed.provider) {
-              footer.insertBefore(makeProviderBadge(parsed.provider), footer.firstChild);
-            }
-            footer.appendChild(makeCopyBtn(fullText));
-
-            session.history.push({ role: 'assistant', content: fullText });
-
-            // Estimasi token sederhana (≈ 4 karakter per token)
-            const estTokens = Math.ceil((message.length + fullText.length) / 4);
-            session.tokens += estTokens;
-            totalTokens = sessions.reduce((acc, s) => acc + s.tokens, 0);
-            updateTokenCounter();
-            renderSidebar();
+            finalizeBubble(bubble, footer, fullText, session, row);
             break;
           }
 
@@ -338,7 +428,6 @@ async function sendMessage() {
             bubble.innerHTML = parseMarkdown(fullText) + '<span class="cursor-blink">▍</span>';
             scrollToBottom();
           }
-
         } catch { /* skip */ }
       }
     }
@@ -346,11 +435,7 @@ async function sendMessage() {
   } catch (err) {
     if (err.name === 'AbortError') {
       if (fullText) {
-        bubble.innerHTML = parseMarkdown(fullText);
-        bubble.querySelectorAll('pre').forEach(pre => wrapCodeBlock(pre));
-        footer.appendChild(makeCopyBtn(fullText));
-        session.history.push({ role: 'assistant', content: fullText });
-        renderSidebar();
+        finalizeBubble(bubble, footer, fullText, session, row);
       } else {
         row.remove();
         session.history.pop();
@@ -367,15 +452,54 @@ async function sendMessage() {
   messageInput.focus();
 }
 
-function stopStream() {
-  abortController?.abort();
+function finalizeBubble(bubble, footer, fullText, session, row) {
+  bubble.innerHTML = parseMarkdown(fullText);
+  bubble.querySelectorAll('pre').forEach(pre => wrapCodeBlock(pre));
+  footer.appendChild(makeCopyBtn(fullText));
+
+  // Tombol regenerate
+  footer.appendChild(makeRegenBtn(session));
+
+  session.history.push({ role: 'assistant', content: fullText });
+
+  // Token estimasi
+  const lastUserMsg = session.history[session.history.length - 2]?.content || '';
+  session.tokens += Math.ceil((lastUserMsg.length + fullText.length) / 4);
+  totalTokens = sessions.reduce((a, s) => a + s.tokens, 0);
+  updateTokenCounter();
+
+  renderSidebar();
+  saveToLocalStorage();
+  saveSessionToFirestore(session);
 }
+
+// ── Regenerate ─────────────────────────────
+function makeRegenBtn(session) {
+  const btn = document.createElement('button');
+  btn.classList.add('btn-copy-msg');
+  btn.innerHTML = `<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg> Regenerate`;
+  btn.addEventListener('click', async () => {
+    // Hapus respons AI terakhir dari history dan UI
+    if (session.history[session.history.length - 1]?.role === 'assistant') {
+      session.history.pop();
+    }
+    // Hapus bubble terakhir (AI)
+    const allRows = messagesEl.querySelectorAll('.msg-row.ai');
+    allRows[allRows.length - 1]?.remove();
+
+    // Kirim ulang
+    await streamAIResponse(session, [...session.history]);
+  });
+  return btn;
+}
+
+function stopStream() { abortController?.abort(); }
 
 // ══════════════════════════════════════════
 // RENDER HELPERS
 // ══════════════════════════════════════════
 
-function renderUserBubble(content) {
+function renderUserBubble(content, append = true) {
   const row = document.createElement('div');
   row.classList.add('msg-row', 'user');
 
@@ -388,11 +512,21 @@ function renderUserBubble(content) {
 
   const avatar = document.createElement('div');
   avatar.classList.add('msg-avatar');
-  avatar.textContent = 'K';
+
+  // Pakai foto user kalau ada
+  if (currentUser?.photoURL) {
+    const img = document.createElement('img');
+    img.src = currentUser.photoURL;
+    img.style.cssText = 'width:100%;height:100%;border-radius:7px;object-fit:cover;';
+    img.onerror = () => { img.remove(); avatar.textContent = (currentUser.displayName || 'K')[0].toUpperCase(); };
+    avatar.appendChild(img);
+  } else {
+    avatar.textContent = (currentUser?.displayName || 'K')[0].toUpperCase();
+  }
 
   const sender = document.createElement('div');
   sender.classList.add('msg-sender');
-  sender.textContent = 'Kamu';
+  sender.textContent = currentUser?.displayName?.split(' ')[0] || 'Kamu';
 
   header.appendChild(sender);
   header.appendChild(avatar);
@@ -412,16 +546,17 @@ function renderUserBubble(content) {
   inner.appendChild(bubble);
   inner.appendChild(footer);
   row.appendChild(inner);
-  messagesEl.appendChild(row);
-  scrollToBottom();
+  if (append) { messagesEl.appendChild(row); scrollToBottom(); }
+  else messagesEl.appendChild(row);
 }
 
-function renderAiBubble(content) {
+function renderAiBubble(content, append = true) {
   const { row, bubble, footer } = createAiBubbleEl();
   bubble.innerHTML = parseMarkdown(content);
   bubble.querySelectorAll('pre').forEach(pre => wrapCodeBlock(pre));
   footer.appendChild(makeCopyBtn(content));
-  messagesEl.appendChild(row);
+  if (append) { messagesEl.appendChild(row); scrollToBottom(); }
+  else messagesEl.appendChild(row);
 }
 
 function createAiBubbleEl() {
@@ -470,15 +605,11 @@ function createAiBubbleEl() {
 
 function selectModel(model, label) {
   currentModel = model;
-
-  // Update UI
   document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
-  document.querySelector(`[data-model="${model}"]`).classList.add('active');
-
+  document.querySelector(`[data-model="${model}"]`)?.classList.add('active');
   modelSelectorLabel.textContent = label;
   currentModelLabel.textContent = label;
-  welcomeModelEl.textContent = label;
-
+  if (welcomeModelEl) welcomeModelEl.textContent = label;
   modelDropdown.classList.remove('open');
   btnModelSelector.classList.remove('open');
 }
@@ -489,81 +620,25 @@ function selectModel(model, label) {
 
 function toggleSystemPromptBar() {
   systemPromptBar.classList.toggle('hidden');
-  if (!systemPromptBar.classList.contains('hidden')) {
-    systemPromptInput.focus();
-  }
+  if (!systemPromptBar.classList.contains('hidden')) systemPromptInput.focus();
 }
 
 function applySystemPrompt() {
-  const val = systemPromptInput.value.trim();
-  systemPrompt = val;
+  systemPrompt = systemPromptInput.value.trim();
   systemPromptBar.classList.add('hidden');
-
-  // Tampilkan badge jika ada system prompt
   renderSystemPromptBadge();
 }
 
 function renderSystemPromptBadge() {
-  // Hapus badge lama
   document.querySelector('.sp-active-badge')?.remove();
-
   if (!systemPrompt) return;
 
   const badge = document.createElement('div');
   badge.classList.add('sp-active-badge');
-  badge.innerHTML = `
-    <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
-    </svg>
-    System prompt aktif · <em>${systemPrompt.slice(0, 40)}${systemPrompt.length > 40 ? '…' : ''}</em>
-  `;
-  badge.title = 'Klik untuk edit system prompt';
+  badge.innerHTML = `<svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg> System prompt aktif`;
   badge.addEventListener('click', toggleSystemPromptBar);
-
-  // Sisipkan sebelum input-box
-  const inputBox = document.getElementById('inputBox');
-  inputBox.parentElement.insertBefore(badge, inputBox);
+  document.getElementById('inputBox').parentElement.insertBefore(badge, document.getElementById('inputBox'));
 }
-
-// ══════════════════════════════════════════
-// TOKEN COUNTER
-// ══════════════════════════════════════════
-
-function updateTokenCounter() {
-  tokenCountEl.textContent = totalTokens.toLocaleString('id-ID');
-}
-
-// ══════════════════════════════════════════
-// CHAT CONTROLS
-// ══════════════════════════════════════════
-
-function newChat() {
-  stopStream();
-  createNewSession();
-  messageInput.focus();
-  // Tutup sidebar hanya di mobile setelah pilih new chat
-  if (window.innerWidth <= 768) closeSidebar();
-}
-
-function clearCurrentSession() {
-  const session = getActiveSession();
-  if (!session || session.history.length === 0) return;
-
-  stopStream();
-  session.history = [];
-  session.title = 'New Chat';
-  session.tokens = 0;
-  messagesEl.innerHTML = '';
-  totalTokens = sessions.reduce((acc, s) => acc + s.tokens, 0);
-  updateTokenCounter();
-  headerTitle.textContent = 'New Chat';
-  showWelcome();
-  renderSidebar();
-}
-
-function showWelcome() { welcomeScreen.style.display = 'flex'; }
-function hideWelcome()  { welcomeScreen.style.display = 'none'; }
 
 // ══════════════════════════════════════════
 // CODE BLOCK & COPY
@@ -603,14 +678,6 @@ function wrapCodeBlock(pre) {
   wrapper.appendChild(pre);
 }
 
-function makeProviderBadge(provider) {
-  const labels = { deepseek: 'DeepSeek', gemini: 'Gemini' };
-  const badge = document.createElement('span');
-  badge.classList.add('provider-badge');
-  badge.textContent = `via ${labels[provider] || provider} (Groq limit)`;
-  return badge;
-}
-
 function makeCopyBtn(content) {
   const btn = document.createElement('button');
   btn.classList.add('btn-copy-msg');
@@ -635,6 +702,10 @@ async function copyText(text, btn, label) {
 // UI HELPERS
 // ══════════════════════════════════════════
 
+function updateTokenCounter() {
+  if (tokenCountEl) tokenCountEl.textContent = totalTokens.toLocaleString('id-ID');
+}
+
 function setLoading(val) {
   isLoading = val;
   if (val) {
@@ -649,6 +720,32 @@ function setLoading(val) {
     btnSend.title = 'Kirim';
   }
 }
+
+function newChat() {
+  stopStream();
+  createNewSession();
+  messageInput.focus();
+  if (window.innerWidth <= 768) closeSidebar();
+}
+
+function clearCurrentSession() {
+  const session = getActiveSession();
+  if (!session || session.history.length === 0) return;
+  stopStream();
+  session.history = [];
+  session.title = 'New Chat';
+  session.tokens = 0;
+  messagesEl.innerHTML = '';
+  totalTokens = sessions.reduce((a, s) => a + s.tokens, 0);
+  updateTokenCounter();
+  headerTitle.textContent = 'New Chat';
+  showWelcome();
+  renderSidebar();
+  saveToLocalStorage();
+}
+
+function showWelcome() { welcomeScreen.style.display = 'flex'; }
+function hideWelcome()  { welcomeScreen.style.display = 'none'; }
 
 function toggleSidebar() {
   sidebar.classList.toggle('open');
