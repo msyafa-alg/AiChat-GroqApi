@@ -1,35 +1,67 @@
 # AsefAI — AI Chat
 
-Aplikasi AI Chat modern powered by **Llama 3.3** via **Groq API**.
+Aplikasi AI Chat modern dengan **streaming response**, **multi-model**, dan **auto fallback** ke Gemini kalau Groq kena rate limit.
 
-Built with Node.js, Express.js, dan Vanilla JavaScript.
+**Live demo:** [ai-chat-groq-api.vercel.app](https://ai-chat-groq-api.vercel.app)
+
+**Repo:** [github.com/msyafa-alg/AiChat-GroqApi](https://github.com/msyafa-alg/AiChat-GroqApi)
 
 ---
 
 ## Tech Stack
 
-- **Backend** — Node.js + Express.js
-- **AI** — Groq API (Llama 3.3 70B)
-- **Frontend** — HTML + CSS + Vanilla JS
-- **Markdown** — Marked.js
-- **Syntax Highlighting** — Highlight.js
+| Layer | Teknologi |
+|-------|-----------|
+| Backend | Node.js + Express.js |
+| AI (utama) | Groq API — Llama 3.3, Mixtral, Gemma |
+| AI (fallback) | Google Gemini API — `gemini-2.0-flash` |
+| Frontend | HTML + CSS + Vanilla JavaScript |
+| Markdown | Marked.js |
+| Syntax Highlighting | Highlight.js |
+| Deploy | Vercel (serverless) |
+
+---
 
 ## Features
 
-- 💬 Chat dengan memory (AI ingat konteks percakapan)
-- ✨ Markdown rendering + syntax highlighting
-- 📋 Copy response & copy code block
-- ⌨️ Typing indicator
-- 📱 Responsive (mobile friendly)
-- 🎨 Dark UI dengan tema Violet/Indigo
+- 💬 **Chat dengan memory** — AI ingat konteks percakapan
+- 🔄 **Auto fallback Groq → Gemini** — chat tetap jalan kalau Groq limit
+- 🤖 **Model selector** — pilih model Groq (Llama, Mixtral, Gemma)
+- 📝 **Custom system prompt** — atur persona AI sesuai kebutuhan
+- 📂 **Multiple chat sessions** — kelola beberapa percakapan sekaligus
+- ⚡ **Streaming response** — jawaban muncul token per token (SSE)
+- ✨ **Markdown rendering** + syntax highlighting
+- 📋 **Copy response** & copy code block
+- 📱 **Responsive** — mobile friendly
+- 🎨 **Dark UI** — tema Violet/Indigo
+
+---
+
+## Cara Kerja Fallback
+
+```
+User kirim pesan
+    ↓
+Coba Groq (model yang dipilih)
+    ↓
+Sukses → stream jawaban ✓
+    ↓
+Rate limit / quota habis?
+    ↓
+Otomatis pindah ke Gemini ✓
+```
+
+Fallback hanya aktif kalau `GEMINI_API_KEY` sudah diisi. Kalau Groq gagal karena error lain (misalnya API key invalid), app tidak fallback — biar masalahnya jelas.
+
+---
 
 ## Getting Started
 
 ### 1. Clone repo
 
 ```bash
-git clone https://github.com/username/asef-ai.git
-cd asef-ai
+git clone https://github.com/msyafa-alg/AiChat-GroqApi.git
+cd AiChat-GroqApi
 ```
 
 ### 2. Install dependencies
@@ -46,11 +78,19 @@ cp .env.example .env
 
 Edit `.env` dan isi API key kamu:
 
-```
+```env
 GROQ_API_KEY=your_groq_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+PORT=3000
 ```
 
-Dapatkan API key gratis di [console.groq.com](https://console.groq.com).
+| Variable | Wajib? | Keterangan |
+|----------|--------|------------|
+| `GROQ_API_KEY` | ✅ Ya | Provider utama. Dapatkan di [console.groq.com](https://console.groq.com) |
+| `GEMINI_API_KEY` | Opsional | Fallback kalau Groq limit. Dapatkan di [Google AI Studio](https://aistudio.google.com/apikey) |
+| `PORT` | Opsional | Default `3000` |
+
+> **Catatan:** Gemini API key format baru bisa awalan `AQ.` — itu valid, bukan error.
 
 ### 4. Jalankan
 
@@ -60,21 +100,58 @@ npm run dev
 
 Buka browser di `http://localhost:3000`.
 
+---
+
+## Deploy ke Vercel
+
+1. Push repo ke GitHub
+2. Import project di [vercel.com](https://vercel.com)
+3. Tambahkan environment variables:
+   - `GROQ_API_KEY`
+   - `GEMINI_API_KEY` (opsional, untuk fallback)
+4. Deploy
+
+Endpoint serverless ada di `api/chat.js`, dikonfigurasi lewat `vercel.json`.
+
+---
+
 ## Project Structure
 
 ```
-asef-ai/
-├── server.js          # Express server
+AiChat-GroqApi/
+├── server.js              # Express server (local dev)
+├── vercel.json            # Konfigurasi deploy Vercel
 ├── package.json
-├── .env               # API key (tidak di-commit)
-├── .env.example       # Template environment
+├── .env.example           # Template environment
+├── api/
+│   └── chat.js            # Serverless endpoint (Vercel)
 ├── routes/
-│   └── chat.js        # Endpoint POST /api/chat
+│   └── chat.js            # Express route (local dev)
+├── lib/
+│   ├── chat.js            # Validasi + logic fallback
+│   └── providers/
+│       ├── groq.js        # Stream dari Groq
+│       └── gemini.js      # Stream dari Gemini
 └── public/
     ├── index.html
     ├── style.css
     └── app.js
 ```
+
+---
+
+## Model yang Tersedia (Groq)
+
+| Model | Keterangan |
+|-------|------------|
+| `llama-3.3-70b-versatile` | Paling pintar (default) |
+| `llama-3.1-8b-instant` | Ringan & cepat |
+| `mixtral-8x7b-32768` | Seimbang, context panjang |
+| `gemma2-9b-it` | Google, efisien |
+
+Kalau fallback ke Gemini, backend otomatis pakai `gemini-2.0-flash`.
+
+---
 
 ## License
 

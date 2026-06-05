@@ -316,6 +316,9 @@ async function sendMessage() {
           if (parsed.done) {
             bubble.innerHTML = parseMarkdown(fullText);
             bubble.querySelectorAll('pre').forEach(pre => wrapCodeBlock(pre));
+            if (parsed.fallback && parsed.provider === 'gemini') {
+              footer.insertBefore(makeProviderBadge(), footer.firstChild);
+            }
             footer.appendChild(makeCopyBtn(fullText));
 
             session.history.push({ role: 'assistant', content: fullText });
@@ -598,6 +601,13 @@ function wrapCodeBlock(pre) {
   pre.parentNode.insertBefore(wrapper, pre);
   wrapper.appendChild(header);
   wrapper.appendChild(pre);
+}
+
+function makeProviderBadge() {
+  const badge = document.createElement('span');
+  badge.classList.add('provider-badge');
+  badge.textContent = 'via Gemini (Groq limit)';
+  return badge;
 }
 
 function makeCopyBtn(content) {

@@ -481,6 +481,14 @@ body { display: flex; height: 100vh; }
 
 .msg-time { font-size: 10px; color: var(--text-faint); }
 
+.provider-badge {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-overlay);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
 .btn-copy-msg {
   display: flex; align-items: center; gap: 4px;
   background: transparent; border: 1px solid transparent;
