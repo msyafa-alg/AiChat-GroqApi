@@ -1,6 +1,6 @@
 # AsefAI — AI Chat
 
-Aplikasi AI Chat modern dengan **streaming response**, **multi-model**, dan **auto fallback** ke Gemini kalau Groq kena rate limit.
+Aplikasi AI Chat modern dengan **streaming response**, **multi-model**, dan **auto fallback** ke DeepSeek kalau Groq kena rate limit.
 
 **Live demo:** [ai-chat-groq-api.vercel.app](https://ai-chat-groq-api.vercel.app)
 
@@ -14,7 +14,7 @@ Aplikasi AI Chat modern dengan **streaming response**, **multi-model**, dan **au
 |-------|-----------|
 | Backend | Node.js + Express.js |
 | AI (utama) | Groq API — Llama 3.3, Mixtral, Gemma |
-| AI (fallback) | Google Gemini API — `gemini-2.0-flash` |
+| AI (fallback) | DeepSeek API — `deepseek-chat` |
 | Frontend | HTML + CSS + Vanilla JavaScript |
 | Markdown | Marked.js |
 | Syntax Highlighting | Highlight.js |
@@ -25,7 +25,7 @@ Aplikasi AI Chat modern dengan **streaming response**, **multi-model**, dan **au
 ## Features
 
 - 💬 **Chat dengan memory** — AI ingat konteks percakapan
-- 🔄 **Auto fallback Groq → Gemini** — chat tetap jalan kalau Groq limit
+- 🔄 **Auto fallback Groq → DeepSeek** — chat tetap jalan kalau Groq limit
 - 🤖 **Model selector** — pilih model Groq (Llama, Mixtral, Gemma)
 - 📝 **Custom system prompt** — atur persona AI sesuai kebutuhan
 - 📂 **Multiple chat sessions** — kelola beberapa percakapan sekaligus
@@ -48,10 +48,10 @@ Sukses → stream jawaban ✓
     ↓
 Rate limit / quota habis?
     ↓
-Otomatis pindah ke Gemini ✓
+Otomatis pindah ke DeepSeek ✓
 ```
 
-Fallback hanya aktif kalau `GEMINI_API_KEY` sudah diisi. Kalau Groq gagal karena error lain (misalnya API key invalid), app tidak fallback — biar masalahnya jelas.
+Fallback hanya aktif kalau `DEEPSEEK_API_KEY` sudah diisi. Kalau Groq gagal karena error lain (misalnya API key invalid), app tidak fallback — biar masalahnya jelas.
 
 ---
 
@@ -80,17 +80,15 @@ Edit `.env` dan isi API key kamu:
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
-GEMINI_API_KEY=your_gemini_api_key_here
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
 PORT=3000
 ```
 
 | Variable | Wajib? | Keterangan |
 |----------|--------|------------|
 | `GROQ_API_KEY` | ✅ Ya | Provider utama. Dapatkan di [console.groq.com](https://console.groq.com) |
-| `GEMINI_API_KEY` | Opsional | Fallback kalau Groq limit. Dapatkan di [Google AI Studio](https://aistudio.google.com/apikey) |
+| `DEEPSEEK_API_KEY` | Opsional | Fallback kalau Groq limit. Dapatkan di [platform.deepseek.com](https://platform.deepseek.com) |
 | `PORT` | Opsional | Default `3000` |
-
-> **Catatan:** Gemini API key format baru bisa awalan `AQ.` — itu valid, bukan error.
 
 ### 4. Jalankan
 
@@ -108,7 +106,7 @@ Buka browser di `http://localhost:3000`.
 2. Import project di [vercel.com](https://vercel.com)
 3. Tambahkan environment variables:
    - `GROQ_API_KEY`
-   - `GEMINI_API_KEY` (opsional, untuk fallback)
+   - `DEEPSEEK_API_KEY` (opsional, untuk fallback)
 4. Deploy
 
 Endpoint serverless ada di `api/chat.js`, dikonfigurasi lewat `vercel.json`.
@@ -131,7 +129,7 @@ AiChat-GroqApi/
 │   ├── chat.js            # Validasi + logic fallback
 │   └── providers/
 │       ├── groq.js        # Stream dari Groq
-│       └── gemini.js      # Stream dari Gemini
+│       └── deepseek.js    # Stream dari DeepSeek (fallback)
 └── public/
     ├── index.html
     ├── style.css
@@ -149,7 +147,7 @@ AiChat-GroqApi/
 | `mixtral-8x7b-32768` | Seimbang, context panjang |
 | `gemma2-9b-it` | Google, efisien |
 
-Kalau fallback ke Gemini, backend otomatis pakai `gemini-2.0-flash`.
+Kalau fallback ke DeepSeek, backend otomatis pakai `deepseek-chat`.
 
 ---
 

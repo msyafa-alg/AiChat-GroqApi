@@ -1,6 +1,6 @@
 // ============================================
 // AsefAI - Vercel Serverless Function (Streaming)
-// Auto fallback: Groq → Gemini on rate limit
+// Auto fallback: Groq → DeepSeek on rate limit
 // ============================================
 const { validateChatRequest, setupSSE, streamToResponse } = require('../lib/chat');
 
