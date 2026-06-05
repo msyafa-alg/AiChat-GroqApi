@@ -41,7 +41,7 @@ const spCharCount        = document.getElementById('spCharCount');
 // ── State ─────────────────────────────────
 let isLoading        = false;
 let abortController  = null;
-let currentModel     = 'llama-3.3-70b-versatile';
+let currentModel     = 'llama-3.1-8b-instant';
 let systemPrompt     = '';
 let totalTokens      = 0;
 let sessions         = [];
