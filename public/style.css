@@ -69,7 +69,12 @@ html, body {
 
 ::selection { background: var(--accent); color: #fff; }
 
-body { display: flex; height: 100vh; }
+body {
+  display: flex;
+  height: 100vh;
+  /* Tambah padding bottom untuk Android navigation bar */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 
 /* Main layout */
 .main {
@@ -745,7 +750,7 @@ body { display: flex; height: 100vh; }
 
   /* Input area mobile */
   .input-area {
-    padding: 10px 12px 14px;
+    padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 16px));
   }
 
   .welcome-title { font-size: 22px; }
