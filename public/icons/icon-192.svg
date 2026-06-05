@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="42" fill="#0a0a0a"/>
+  <rect width="192" height="192" rx="42" fill="white" opacity="1"/>
+  <rect width="192" height="192" rx="42" fill="#0a0a0a"/>
+
+  <!-- AsefAI logo: layered diamonds -->
+  <g transform="translate(96, 96)">
+    <!-- Top layer -->
+    <polygon
+      points="-53.6,-11.055 0,-30.954 53.6,-11.055 0,8.844"
+      fill="white" opacity="0.95"
+    />
+    <!-- Middle layer -->
+    <polygon
+      points="-53.6,3.6850000000000005 0,-16.214000000000002 53.6,3.6850000000000005 0,23.584"
+      fill="white" opacity="0.7"
+    />
+    <!-- Bottom layer -->
+    <polygon
+      points="-53.6,18.425 0,-1.474 53.6,18.425 0,38.324000000000005"
+      fill="white" opacity="0.45"
+    />
+  </g>
+</svg>

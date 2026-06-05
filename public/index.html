@@ -2,11 +2,15 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AsefAI — AI Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <!-- Agar app full screen sampai bawah navigation bar Android -->
+  <title>AsefAI — AI Chat</title>
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#0a0a0a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="AsefAI" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -267,5 +271,81 @@
   <!-- Firebase Auth — harus module type -->
   <script type="module" src="auth.js"></script>
   <script src="app.js"></script>
+
+  <!-- PWA Install Prompt -->
+  <div id="pwaInstallBanner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:500;
+    background:#1a1a1a;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:14px 18px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.6);display:none;align-items:center;gap:12px;
+    max-width:340px;width:calc(100% - 32px);backdrop-filter:blur(8px);">
+    <div style="width:36px;height:36px;background:#fff;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:#0a0a0a">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.9"/>
+        <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:600;color:#f0f0f0;margin-bottom:2px;">Install AsefAI</div>
+      <div style="font-size:11.5px;color:#666;line-height:1.4;">Tambah ke homescreen untuk akses cepat</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button id="pwaInstallBtn" style="background:#fff;color:#111;border:none;border-radius:8px;padding:7px 13px;
+        font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Install</button>
+      <button id="pwaInstallDismiss" style="background:transparent;color:#555;border:1px solid rgba(255,255,255,0.08);
+        border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;">✕</button>
+    </div>
+  </div>
+
+  <script>
+    // ── Service Worker Registration ────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('[SW] Registered:', reg.scope))
+          .catch(err => console.warn('[SW] Registration failed:', err));
+      });
+    }
+
+    // ── PWA Install Prompt ─────────────────
+    let deferredPrompt = null;
+    const installBanner  = document.getElementById('pwaInstallBanner');
+    const installBtn     = document.getElementById('pwaInstallBtn');
+    const dismissBtn     = document.getElementById('pwaInstallDismiss');
+    const PWA_DISMISS_KEY = 'asefai_pwa_dismissed';
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+
+      // Jangan tampilkan kalau user sudah dismiss
+      if (localStorage.getItem(PWA_DISMISS_KEY)) return;
+
+      // Tunda 3 detik biar tidak langsung muncul
+      setTimeout(() => {
+        installBanner.style.display = 'flex';
+      }, 3000);
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      installBanner.style.display = 'none';
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log('[PWA] Install outcome:', outcome);
+      deferredPrompt = null;
+    });
+
+    dismissBtn.addEventListener('click', () => {
+      installBanner.style.display = 'none';
+      localStorage.setItem(PWA_DISMISS_KEY, '1');
+    });
+
+    // Kalau sudah terinstall, sembunyikan banner
+    window.addEventListener('appinstalled', () => {
+      installBanner.style.display = 'none';
+      deferredPrompt = null;
+      console.log('[PWA] App installed');
+    });
+  </script>
 </body>
 </html>
