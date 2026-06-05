@@ -56,6 +56,13 @@ let activeSession  = null; // id of active session
 init();
 
 function init() {
+  // ── Fix keyboard virtual mobile ──────────
+  // Visual Viewport API: paling reliable untuk detect keyboard di iOS/Android
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', onViewportResize);
+  } else {
+    window.addEventListener('resize', onViewportResize);
+  }
   // Chips
   document.querySelectorAll('.chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -694,3 +701,27 @@ function now() {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Visual Viewport handler ────────────────
+// Saat keyboard virtual muncul, paksa input area tetap kelihatan
+function onViewportResize() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+
+  const inputArea = document.querySelector('.input-area');
+  if (!inputArea) return;
+
+  // Hitung offset dari bawah window ke bawah visual viewport
+  const offsetBottom = window.innerHeight - vv.height - vv.offsetTop;
+
+  if (offsetBottom > 50) {
+    // Keyboard sedang muncul — geser input area ke atas keyboard
+    inputArea.style.transform = `translateY(-${offsetBottom}px)`;
+    inputArea.style.transition = 'transform 0.1s ease';
+    // Scroll chat ke bawah agar pesan terakhir tetap kelihatan
+    scrollToBottom(true);
+  } else {
+    // Keyboard tutup — kembalikan posisi normal
+    inputArea.style.transform = '';
+  }
+}

@@ -69,12 +69,28 @@ html, body {
 
 ::selection { background: var(--accent); color: #fff; }
 
-body { display: flex; height: 100vh; }
+/* Pakai dvh agar layout ikut mengecil saat keyboard virtual muncul */
+html {
+  height: -webkit-fill-available;
+}
 
-/* Pakai dvh (dynamic viewport height) agar input tidak ketutupan keyboard virtual */
+body {
+  display: flex;
+  height: 100vh;
+  height: -webkit-fill-available; /* iOS Safari */
+}
+
 @supports (height: 100dvh) {
-  html, body { height: 100dvh; }
   body { height: 100dvh; }
+}
+
+/* Main layout juga ikut */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0; /* penting agar flex child bisa scroll */
 }
 
 /* Scrollbars */
@@ -233,7 +249,6 @@ body { display: flex; height: 100vh; }
 /* ══════════════════════════════════════════
    MAIN
 ══════════════════════════════════════════ */
-.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 /* ── Header ──────────────────────────────── */
 .header {
@@ -607,6 +622,8 @@ body { display: flex; height: 100vh; }
   padding: 12px 22px 16px;
   background: var(--bg-base); border-top: 1px solid var(--border);
   flex-shrink: 0;
+  position: relative; /* diperlukan untuk transform */
+  z-index: 50;
 }
 
 /* System Prompt Bar */
