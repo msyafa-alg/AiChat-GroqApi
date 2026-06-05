@@ -334,6 +334,31 @@ async function sendMessage() {
   const message = messageInput.value.trim();
   if (!message || isLoading) return;
 
+  // Cek limit guest
+  if (window.isGuest) {
+    if (window.isGuestLimitReached()) {
+      window.incrementGuestCount(); // trigger modal
+      return;
+    }
+    window.incrementGuestCount();
+    // Update counter di sidebar
+    document.getElementById('userInfo')?.remove();
+    // Re-render guest info
+    const used = window.getGuestCount();
+    const sisa = Math.max(0, 3 - used);
+    const footer = document.querySelector('.sidebar-footer');
+    if (footer) {
+      const guestInfo = document.createElement('div');
+      guestInfo.id = 'userInfo';
+      guestInfo.style.cssText = `display:flex;flex-direction:column;gap:8px;padding:8px 6px;border-top:1px solid rgba(255,255,255,0.06);margin-top:4px;`;
+      guestInfo.innerHTML = `
+        <div style="font-size:11.5px;color:#666;text-align:center;">Tamu · <span style="color:#e0e0e0;font-weight:600">${sisa}</span> percakapan tersisa</div>
+        <a href="/login.html" style="display:block;background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;border-radius:7px;padding:7px;font-size:12px;font-weight:500;text-align:center;text-decoration:none;">Login untuk akses penuh</a>
+      `;
+      footer.appendChild(guestInfo);
+    }
+  }
+
   const session = getActiveSession();
   hideWelcome();
   renderUserBubble(message);
@@ -360,12 +385,6 @@ async function streamAIResponse(session, historySnapshot) {
 
   let fullText = '';
 
-  // Greeting personal — inject nama user ke system prompt
-  const userName = currentUser?.displayName?.split(' ')[0] || '';
-  const extraContext = userName
-    ? `\nNama pengguna saat ini adalah ${userName}. Sapa dengan namanya jika ini adalah pesan pertama.`
-    : '';
-
   try {
     abortController = new AbortController();
 
@@ -376,7 +395,8 @@ async function streamAIResponse(session, historySnapshot) {
         message: historySnapshot[historySnapshot.length - 1].content,
         history: historySnapshot.slice(0, -1),
         model: currentModel,
-        systemPrompt: (systemPrompt || '') + extraContext,
+        systemPrompt: systemPrompt || undefined, // kirim undefined kalau kosong, biar backend pakai DEFAULT
+        userName: currentUser?.displayName?.split(' ')[0] || '', // kirim nama user terpisah
       }),
       signal: abortController.signal,
     });
@@ -393,6 +413,7 @@ async function streamAIResponse(session, historySnapshot) {
     const reader  = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let isDone = false;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -414,11 +435,14 @@ async function streamAIResponse(session, historySnapshot) {
             bubble.innerHTML = `<span style="color:var(--error)">${parsed.error}</span>`;
             row.classList.add('error');
             session.history.pop();
+            isDone = true;
             break;
           }
 
           if (parsed.done) {
+            if (!fullText) fullText = '_(Tidak ada respons)_';
             finalizeBubble(bubble, footer, fullText, session, row);
+            isDone = true;
             break;
           }
 
@@ -428,8 +452,19 @@ async function streamAIResponse(session, historySnapshot) {
             bubble.innerHTML = parseMarkdown(fullText) + '<span class="cursor-blink">▍</span>';
             scrollToBottom();
           }
-        } catch { /* skip */ }
+        } catch (parseErr) {
+          console.warn('SSE parse error:', parseErr.message, 'line:', line);
+        }
       }
+      if (isDone) break;
+    }
+
+    // Fallback: kalau stream habis tapi done event tidak datang
+    if (!isDone && fullText) {
+      finalizeBubble(bubble, footer, fullText, session, row);
+    } else if (!isDone && !fullText) {
+      bubble.innerHTML = `<span style="color:var(--error)">Tidak ada respons dari AI.</span>`;
+      session.history.pop();
     }
 
   } catch (err) {

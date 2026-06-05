@@ -32,7 +32,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
+      gap: 20px;
       box-shadow: 0 24px 64px rgba(0,0,0,0.6);
     }
 
@@ -43,102 +43,104 @@
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 20px rgba(255,255,255,0.12);
     }
-
     .login-logo svg { color: #0a0a0a; }
 
-    .login-title {
-      text-align: center;
-    }
-
+    .login-title { text-align: center; }
     .login-title h1 {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.4px;
-      margin-bottom: 6px;
+      font-size: 22px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 6px;
     }
+    .login-title p { font-size: 13px; color: #666; line-height: 1.6; }
 
-    .login-title p {
-      font-size: 13px;
-      color: #666;
+    /* Guest limit banner */
+    .guest-banner {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12.5px;
+      color: #888;
+      text-align: center;
       line-height: 1.6;
+      display: none;
     }
+    .guest-banner.show { display: block; }
+    .guest-banner strong { color: #e0e0e0; }
 
     .divider {
-      width: 100%;
-      height: 1px;
-      background: rgba(255,255,255,0.06);
+      width: 100%; display: flex; align-items: center; gap: 10px;
+    }
+    .divider-line { flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
+    .divider-text { font-size: 11px; color: #444; white-space: nowrap; }
+
+    /* Buttons */
+    .btn-login {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; width: 100%;
+      border: none; border-radius: 10px;
+      padding: 12px 20px; font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+      transition: all 0.15s ease;
     }
 
     .btn-google {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      width: 100%;
-      background: #ffffff;
-      color: #111111;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.15s ease;
+      background: #ffffff; color: #111111;
       box-shadow: 0 2px 10px rgba(255,255,255,0.1);
     }
+    .btn-google:hover { background: #e8e8e8; transform: translateY(-1px); }
 
-    .btn-google:hover {
-      background: #e8e8e8;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(255,255,255,0.15);
+    .btn-github {
+      background: #1a1a1a; color: #f0f0f0;
+      border: 1px solid rgba(255,255,255,0.1);
     }
+    .btn-github:hover { background: #222; transform: translateY(-1px); border-color: rgba(255,255,255,0.2); }
 
-    .btn-google:active { transform: translateY(0); }
-
-    .btn-google:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
+    .btn-guest {
+      background: transparent; color: #555;
+      border: 1px solid rgba(255,255,255,0.06);
+      font-size: 13px;
     }
+    .btn-guest:hover { color: #888; border-color: rgba(255,255,255,0.12); }
 
-    .btn-google svg { flex-shrink: 0; }
+    .btn-login:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
     .loading-spinner {
-      width: 18px; height: 18px;
-      border: 2px solid rgba(0,0,0,0.2);
-      border-top-color: #111;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(0,0,0,0.15);
+      border-top-color: currentColor;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       display: none;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .error-msg {
       width: 100%;
       background: rgba(248,113,113,0.1);
       border: 1px solid rgba(248,113,113,0.25);
-      color: #fca5a5;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 12.5px;
-      text-align: center;
-      display: none;
+      color: #fca5a5; border-radius: 8px;
+      padding: 10px 14px; font-size: 12.5px;
+      text-align: center; display: none;
     }
 
     .login-footer {
+      font-size: 11px; color: #333; text-align: center; line-height: 1.6;
+    }
+
+    .guest-count {
+      display: inline-block;
+      background: rgba(255,255,255,0.08);
+      color: #e0e0e0;
+      padding: 1px 7px;
+      border-radius: 20px;
       font-size: 11px;
-      color: #444;
-      text-align: center;
-      line-height: 1.6;
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
 
   <div class="login-card">
-    <!-- Logo -->
     <div class="login-logo">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
         <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor"/>
@@ -147,95 +149,144 @@
       </svg>
     </div>
 
-    <!-- Title -->
     <div class="login-title">
       <h1>Selamat datang di AsefAI</h1>
-      <p>Login untuk mulai menggunakan<br/>AI Chat yang cerdas dan responsif</p>
+      <p>Login untuk menyimpan riwayat chat<br/>dan akses tanpa batas</p>
     </div>
 
-    <div class="divider"></div>
+    <!-- Banner limit guest -->
+    <div class="guest-banner" id="guestBanner">
+      Kamu sudah menggunakan <strong id="guestUsed">0</strong>/3 percakapan gratis.
+      Login untuk melanjutkan tanpa batas.
+    </div>
 
-    <!-- Error message -->
     <div class="error-msg" id="errorMsg"></div>
 
-    <!-- Google Login Button -->
-    <button class="btn-google" id="btnGoogle">
-      <!-- Google icon -->
+    <!-- Google -->
+    <button class="btn-login btn-google" id="btnGoogle">
       <svg width="18" height="18" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
       </svg>
-      <span id="btnGoogleText">Lanjutkan dengan Google</span>
-      <div class="loading-spinner" id="btnSpinner"></div>
+      <span>Lanjutkan dengan Google</span>
+      <div class="loading-spinner" id="spinnerGoogle"></div>
+    </button>
+
+    <!-- GitHub -->
+    <button class="btn-login btn-github" id="btnGithub">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+      <span>Lanjutkan dengan GitHub</span>
+      <div class="loading-spinner" id="spinnerGithub"></div>
+    </button>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <span class="divider-text">atau</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <!-- Guest -->
+    <button class="btn-login btn-guest" id="btnGuest">
+      Lanjutkan sebagai tamu <span class="guest-count" id="guestCountBadge">3 sisa</span>
     </button>
 
     <p class="login-footer">
-      Dengan login, kamu menyetujui penggunaan<br/>
-      data untuk layanan AsefAI.
+      Tamu mendapat 3 percakapan gratis.<br/>
+      Login untuk akses penuh & riwayat tersimpan.
     </p>
   </div>
 
-  <!-- Firebase SDK -->
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged }
+    import { initializeApp }   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, signInWithPopup, GoogleAuthProvider, GithubAuthProvider, onAuthStateChanged }
       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
     const firebaseConfig = {
-      apiKey: "AIzaSyBywDv13f0_psOCQuubzpQx53lwwEYqt8s",
-      authDomain: "syafaproject1.firebaseapp.com",
-      projectId: "syafaproject1",
-      storageBucket: "syafaproject1.firebasestorage.app",
+      apiKey:            "AIzaSyBywDv13f0_psOCQuubzpQx53lwwEYqt8s",
+      authDomain:        "syafaproject1.firebaseapp.com",
+      projectId:         "syafaproject1",
+      storageBucket:     "syafaproject1.firebasestorage.app",
       messagingSenderId: "722247897392",
-      appId: "1:722247897392:web:29f4221a793fe864be38f5",
+      appId:             "1:722247897392:web:29f4221a793fe864be38f5",
     };
 
-    const app      = initializeApp(firebaseConfig);
-    const auth     = getAuth(app);
-    const provider = new GoogleAuthProvider();
+    const app            = initializeApp(firebaseConfig);
+    const auth           = getAuth(app);
+    const googleProvider = new GoogleAuthProvider();
+    const githubProvider = new GithubAuthProvider();
 
-    const btnGoogle    = document.getElementById('btnGoogle');
-    const btnText      = document.getElementById('btnGoogleText');
-    const btnSpinner   = document.getElementById('btnSpinner');
-    const errorMsg     = document.getElementById('errorMsg');
+    const GUEST_KEY = 'asefai_guest_count';
+    const MAX_GUEST = 3;
 
-    // Kalau sudah login, langsung redirect ke chat
+    // Kalau sudah login → langsung ke chat
     onAuthStateChanged(auth, (user) => {
-      if (user) {
-        window.location.href = '/';
-      }
+      if (user) window.location.href = '/';
     });
 
-    // Klik login Google
-    btnGoogle.addEventListener('click', async () => {
-      setLoading(true);
-      errorMsg.style.display = 'none';
+    // Update UI guest count
+    function getGuestCount() {
+      return parseInt(localStorage.getItem(GUEST_KEY) || '0');
+    }
+
+    function updateGuestUI() {
+      const used = getGuestCount();
+      const sisa = Math.max(0, MAX_GUEST - used);
+      const badge = document.getElementById('guestCountBadge');
+      const banner = document.getElementById('guestBanner');
+      const guestUsed = document.getElementById('guestUsed');
+      const btnGuest = document.getElementById('btnGuest');
+
+      badge.textContent = `${sisa} sisa`;
+      guestUsed.textContent = used;
+
+      if (used > 0) banner.classList.add('show');
+      if (sisa === 0) {
+        btnGuest.disabled = true;
+        btnGuest.querySelector('span:first-of-type').textContent = 'Batas tamu habis';
+        badge.textContent = '0 sisa';
+        badge.style.background = 'rgba(248,113,113,0.15)';
+        badge.style.color = '#f87171';
+      }
+    }
+
+    updateGuestUI();
+
+    // Login handlers
+    async function loginWith(provider, spinnerId) {
+      const spinner = document.getElementById(spinnerId);
+      spinner.style.display = 'block';
+      document.getElementById('errorMsg').style.display = 'none';
 
       try {
         await signInWithPopup(auth, provider);
-        // onAuthStateChanged akan handle redirect
+        // onAuthStateChanged handle redirect
       } catch (err) {
-        console.error('Login error:', err.code);
+        spinner.style.display = 'none';
         let msg = 'Login gagal. Silakan coba lagi.';
         if (err.code === 'auth/popup-closed-by-user') msg = 'Login dibatalkan.';
         if (err.code === 'auth/network-request-failed') msg = 'Tidak ada koneksi internet.';
-        showError(msg);
-        setLoading(false);
+        if (err.code === 'auth/account-exists-with-different-credential') msg = 'Email sudah dipakai dengan metode login lain.';
+        const errEl = document.getElementById('errorMsg');
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
       }
+    }
+
+    document.getElementById('btnGoogle').addEventListener('click', () => loginWith(googleProvider, 'spinnerGoogle'));
+    document.getElementById('btnGithub').addEventListener('click', () => loginWith(githubProvider, 'spinnerGithub'));
+
+    // Guest mode
+    document.getElementById('btnGuest').addEventListener('click', () => {
+      const used = getGuestCount();
+      if (used >= MAX_GUEST) return;
+      // Set flag guest mode
+      sessionStorage.setItem('asefai_guest_mode', 'true');
+      window.location.href = '/';
     });
-
-    function setLoading(val) {
-      btnGoogle.disabled = val;
-      btnText.textContent = val ? 'Memproses...' : 'Lanjutkan dengan Google';
-      btnSpinner.style.display = val ? 'block' : 'none';
-    }
-
-    function showError(msg) {
-      errorMsg.textContent = msg;
-      errorMsg.style.display = 'block';
-    }
   </script>
 
 </body>
