@@ -4,28 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AsefAI — AI Chat</title>
+  <!-- viewport-fit=cover penting untuk iPhone notch + keyboard handling -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <!-- Google Fonts: Inter + Fira Code -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
-
-  <!-- Highlight.js -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-
-  <!-- Marked.js -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- ── SIDEBAR ─────────────────────────── -->
+  <!-- ══════════════════════════════════════
+       SIDEBAR
+  ══════════════════════════════════════ -->
   <aside class="sidebar" id="sidebar">
+
+    <!-- Logo -->
     <div class="sidebar-logo">
       <div class="logo-mark">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.9"/>
           <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -35,52 +35,65 @@
       <span class="logo-tag">beta</span>
     </div>
 
+    <!-- New Chat -->
     <button class="btn-new-chat" id="btnNewChat">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
       New Chat
     </button>
 
-    <div class="sidebar-label">Recent</div>
-
+    <!-- Chat Sessions -->
+    <div class="sidebar-label">Sesi Chat</div>
     <div class="chat-history" id="chatHistory">
       <div class="history-empty">
-        <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24" opacity="0.3">
+        <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24" opacity="0.3">
           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
         </svg>
-        <span>Belum ada percakapan</span>
+        <span>Belum ada sesi</span>
       </div>
     </div>
 
+    <!-- Footer -->
     <div class="sidebar-footer">
+      <!-- Token counter -->
+      <div class="token-counter" id="tokenCounter">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="tokenCount">0</span> token digunakan
+      </div>
+
       <button class="btn-clear" id="btnClear">
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
           <path d="M10 11v6"/><path d="M14 11v6"/>
         </svg>
         Clear conversation
       </button>
+
       <div class="sidebar-info">
         <span class="model-dot"></span>
-        Llama 3.3 · Groq
+        <span id="currentModelLabel">Llama 3.3 70B</span>
       </div>
     </div>
   </aside>
 
-  <!-- ── MAIN ───────────────────────────── -->
+  <!-- ══════════════════════════════════════
+       MAIN
+  ══════════════════════════════════════ -->
   <div class="main">
 
     <!-- Header -->
     <header class="header">
       <button class="btn-hamburger" id="btnHamburger">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
         </svg>
       </button>
 
       <div class="header-center">
-        <span class="header-title">AsefAI</span>
+        <span class="header-title" id="headerTitle">New Chat</span>
         <div class="header-status">
           <span class="pulse-ring"></span>
           <span class="status-dot"></span>
@@ -89,8 +102,61 @@
       </div>
 
       <div class="header-actions">
-        <button class="btn-icon" id="btnScrollBottom" title="Scroll ke bawah">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <!-- Model Selector -->
+        <div class="model-selector-wrap">
+          <button class="btn-model-selector" id="btnModelSelector">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <span id="modelSelectorLabel">Llama 3.3 70B</span>
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+
+          <div class="model-dropdown" id="modelDropdown">
+            <div class="model-dropdown-label">Pilih Model</div>
+            <button class="model-option active" data-model="llama-3.3-70b-versatile" data-label="Llama 3.3 70B">
+              <div class="model-option-info">
+                <span class="model-option-name">Llama 3.3 70B</span>
+                <span class="model-option-desc">Paling pintar · Lebih lambat</span>
+              </div>
+              <span class="model-check">✓</span>
+            </button>
+            <button class="model-option" data-model="llama-3.1-8b-instant" data-label="Llama 3.1 8B">
+              <div class="model-option-info">
+                <span class="model-option-name">Llama 3.1 8B</span>
+                <span class="model-option-desc">Ringan · Super cepat</span>
+              </div>
+              <span class="model-check">✓</span>
+            </button>
+            <button class="model-option" data-model="mixtral-8x7b-32768" data-label="Mixtral 8x7B">
+              <div class="model-option-info">
+                <span class="model-option-name">Mixtral 8x7B</span>
+                <span class="model-option-desc">Seimbang · Context panjang</span>
+              </div>
+              <span class="model-check">✓</span>
+            </button>
+            <button class="model-option" data-model="gemma2-9b-it" data-label="Gemma 2 9B">
+              <div class="model-option-info">
+                <span class="model-option-name">Gemma 2 9B</span>
+                <span class="model-option-desc">Google · Efisien</span>
+              </div>
+              <span class="model-check">✓</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- System Prompt -->
+        <button class="btn-icon" id="btnSystemPrompt" title="System Prompt">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
+          </svg>
+        </button>
+
+        <!-- Scroll bottom -->
+        <button class="btn-icon" id="btnScrollBottom" title="Scroll ke bawah" style="opacity:0;pointer-events:none">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <polyline points="6 9 12 15 18 9"/>
           </svg>
         </button>
@@ -99,46 +165,43 @@
 
     <!-- Chat Area -->
     <main class="chat-area" id="chatArea">
-
       <!-- Welcome -->
       <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-glow"></div>
         <div class="welcome-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
             <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor"/>
             <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
             <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
         </div>
         <h1 class="welcome-title">Halo, saya <span class="gradient-text">AsefAI</span></h1>
-        <p class="welcome-sub">Powered by Llama 3.3 · Groq</p>
-        <p class="welcome-desc">
-          Siap membantu kamu dengan <em>coding</em>, <em>debugging</em>, <em>belajar</em>, dan pertanyaan apapun.
-        </p>
+        <p class="welcome-sub">Powered by Groq · <span id="welcomeModel">Llama 3.3 70B</span></p>
+        <p class="welcome-desc">Siap membantu <em>coding</em>, <em>debugging</em>, <em>belajar</em>, dan pertanyaan apapun.</p>
         <div class="welcome-chips">
           <button class="chip" data-text="Buatkan REST API sederhana dengan Express.js">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-            REST API dengan Express
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            REST API Express
           </button>
           <button class="chip" data-text="Jelaskan perbedaan useEffect dan useMemo di React">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             React Hooks
           </button>
           <button class="chip" data-text="Apa itu Docker dan bagaimana cara kerjanya?">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            Docker Explained
-          </button>
-          <button class="chip" data-text="Bantu saya debug kode ini: TypeError: Cannot read properties of undefined">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 9 6 6m0-6-6 6"/></svg>
-            Debug Error
-          </button>
-          <button class="chip" data-text="Rekomendasikan arsitektur untuk aplikasi chat realtime">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            Arsitektur App
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Docker
           </button>
           <button class="chip" data-text="Tulis query SQL untuk mencari 5 produk terlaris">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
             SQL Query
+          </button>
+          <button class="chip" data-text="Rekomendasikan arsitektur untuk aplikasi chat realtime">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            Arsitektur App
+          </button>
+          <button class="chip" data-text="Bantu debug error: Cannot read properties of undefined">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 9 6 6m0-6-6 6"/></svg>
+            Debug Error
           </button>
         </div>
       </div>
@@ -149,6 +212,28 @@
 
     <!-- Input -->
     <div class="input-area">
+      <!-- System prompt bar (tersembunyi default) -->
+      <div class="system-prompt-bar hidden" id="systemPromptBar">
+        <div class="sp-header">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
+          </svg>
+          <span>System Prompt</span>
+          <button class="sp-close" id="btnCloseSystemPrompt">×</button>
+        </div>
+        <textarea
+          id="systemPromptInput"
+          class="sp-textarea"
+          placeholder="Contoh: Kamu adalah senior backend developer. Jawab selalu dengan contoh kode. Gunakan bahasa Indonesia."
+          rows="3"
+          maxlength="500"
+        ></textarea>
+        <div class="sp-footer">
+          <span class="sp-char" id="spCharCount">0/500</span>
+          <button class="sp-apply" id="btnApplySystemPrompt">Terapkan</button>
+        </div>
+      </div>
+
       <div class="input-box" id="inputBox">
         <textarea
           id="messageInput"
@@ -160,23 +245,25 @@
         <div class="input-actions">
           <span class="char-count" id="charCount">0/2000</span>
           <button class="btn-send" id="btnSend" aria-label="Kirim">
-            <svg class="icon-send" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <svg class="icon-send" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <line x1="22" y1="2" x2="11" y2="13"/>
               <polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
-            <svg class="icon-loading hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <svg class="icon-loading hidden" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
             </svg>
           </button>
         </div>
       </div>
-      <p class="input-hint">Enter kirim &nbsp;·&nbsp; Shift+Enter baris baru &nbsp;·&nbsp; Percakapan disimpan di memori sesi ini</p>
+      <p class="input-hint">Enter kirim &nbsp;·&nbsp; Shift+Enter baris baru &nbsp;·&nbsp; Ctrl+K new chat</p>
     </div>
-
   </div>
 
-  <!-- Overlay mobile -->
+  <!-- Sidebar overlay -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- System prompt modal backdrop -->
+  <div class="modal-backdrop hidden" id="modalBackdrop"></div>
 
   <script src="app.js"></script>
 </body>
